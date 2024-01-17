@@ -1,0 +1,4 @@
+/node_modules
+/src/Data/Logs/**/*
+/src/Data/*.json
+/src/Data/*.xlsx
