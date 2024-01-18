@@ -29,7 +29,7 @@ class WebScraperPage extends BaseScraper {
     async reload() {
         await this.#page.goto('https://governa.presidencia.gov.br/painel_publico/#/edbfb1b7-78a7-44a4-988d-87d4c8895246/5d526078-a15a-47b3-83a4-20e20a693aad');
         this.#currentPageName = knownPagesEnum.MAIN;
-        // await this.page.setViewport({ width: 2000, height: 1024 });
+        await this.#page.setViewport({ width: 800, height: 600 });
         await this.#page.waitForNetworkIdle({ idleTime: 5000 });
         await this.#page.waitForSelector('iframe');
         this.#iframe = await this.#page.frames()[1];
@@ -50,7 +50,7 @@ class WebScraperPage extends BaseScraper {
         return this;
     }
 
-    async destroy(){
+    async destroy() {
         try {
             await this.#page.browser().close();
             this.#page = undefined;
@@ -123,6 +123,14 @@ class WebScraperPage extends BaseScraper {
         });
     }
 
+    async #navigateToAgriculture() {
+        await this.#navigateToFacade({
+            currentPageName: knownPagesEnum.AGRICULTURE,
+            clickOffset: { x: 30, y: 70 },
+            fnName: this.#navigateToAgriculture.name,
+        });
+    }
+
     async #navigateToCulturePage() {
         await this.#navigateToFacade({
             currentPageName: knownPagesEnum.CULTURE,
@@ -150,7 +158,14 @@ class WebScraperPage extends BaseScraper {
     async #extractTextContent() {
         try {
             this.#emitLog('Extracting textContent');
-            const textContent = await this.#iframe.$$eval('[width="315"][height="50"] tspan', elements => elements.map(element => element.textContent));
+            const textContent = await this.#iframe.$$eval('svg[width][height] text tspan[x="0"][dy="0"]', elements => {
+                return elements
+                    .filter(element => {
+                        const scrollHeight = element.parentNode.scrollHeight;
+                        return scrollHeight > 25 && scrollHeight < 30;
+                    })
+                    .map(element => element.textContent);
+            });
             this.#emitLog(`Extraction textContent succeeded`);
             this.#textContentParts.push({ from: this.#currentPageName, textContent });
         } catch (error) {
@@ -183,7 +198,8 @@ class WebScraperPage extends BaseScraper {
                 this.#navigateToJobPage,
                 this.#navigateToCulturePage,
                 this.#navigateToCitizenPage,
-                this.#navigateToStatesAndMunicipalitiesPage
+                this.#navigateToStatesAndMunicipalitiesPage,
+                this.#navigateToAgriculture,
             ]
             for await (const goToPage of steps) {
                 await goToPage.call(this);
