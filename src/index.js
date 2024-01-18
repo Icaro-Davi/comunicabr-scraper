@@ -22,6 +22,11 @@ async function main() {
     }
 
     const cities = await fetchCities.get();
+    const cachedScrapedData = JSON.parse(await dynamicFile.getFile() ?? [])
+        .map(cachedScrapedData => new ScraperData({
+            city: cachedScrapedData.city,
+            data: cachedScrapedData.scrapedData
+        }));
 
     let rows = [];
     if (cities.length) {
@@ -39,12 +44,7 @@ async function main() {
         rows = data.map(scrapedData => scrapedData.toXLSXLine());
     }
 
-    const cachedScrapedData = JSON.parse(await dynamicFile.getFile() ?? [])
-        .map(cachedScrapedData => new ScraperData({
-            city: cachedScrapedData.city,
-            data: cachedScrapedData.scrapedData
-        }));
-    rows = [...rows, ...cachedScrapedData.map(scrapedData => scrapedData.toXLSXLine())];
+    rows = [ ...cachedScrapedData.map(scrapedData => scrapedData.toXLSXLine()), ...rows ];
 
     await ScraperData.toXLSXFile({
         rows, saveToXLSXModule: new SaveToXLSXModule({
