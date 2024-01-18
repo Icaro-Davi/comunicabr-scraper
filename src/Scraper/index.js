@@ -72,12 +72,17 @@ class Scraper {
         this.#scrapers = await Promise.all(new Array(this.#scraperQuantity).fill(0).map((_, index) => new WebScraperPage().init(this.#browsers[index])));
         return new Promise(async (resolve, reject) => {
             try {
-                this.#scrapers.forEach(async (scraper, index) => {
+                for (let index = 0; index < this.#scrapers.length; index++) {
+                    const scraper = this.#scrapers[index];
+
                     await fakePromise(this.#delayBetweenBrowsersInstances);
+
                     this.#activeLogs && scraper.onLog(message => console.log(message));
+
                     scraper.onStarting(city => {
                         this.#customError.message({ fnName: this.#startScrapers.name, message: `"${city.name} - ${city.UF}" ${this.#cities.length} left` });
                     });
+
                     scraper.onDone((scraperData) => {
                         scraperData = new ScraperData(scraperData);
                         this.#scrapedData.push(scraperData);
@@ -95,6 +100,7 @@ class Scraper {
                             resolve();
                         }
                     });
+
                     scraper.onError(async ({ error, city }) => {
                         this.#failedCities.push(city);
                         await this.#customError.warn({
@@ -103,14 +109,15 @@ class Scraper {
                         });
 
                         await scraper.destroy();
-                        if (this.#cities.length){
+                        if (this.#cities.length) {
                             this.#browsers[index] = await this.#openBrowser();
                             await scraper.init(this.#browsers[index]);
                             scraper.extractDataFromCity(this.#cities.pop());
                         }
                     });
+
                     scraper.extractDataFromCity(this.#cities.pop());
-                });
+                }
             } catch (error) {
                 reject(await this.#customError.throw({ fnName: this.#startScrapers.name, message: `Scraper Broke. ${error}` }));
             }
