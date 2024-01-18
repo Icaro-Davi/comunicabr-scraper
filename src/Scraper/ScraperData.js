@@ -17,32 +17,42 @@ class ScraperData {
 
     #allDataValidated = true;
 
+    static #customError = new CustomError({ moduleName: ScraperData.name, allowCreateLogs: true })
+
     static #xlsxHeaderRow = [
         // City
         'Cidade',
 
         // jobs
-        'Trabalhadores com CLT',
-        'MEI cadastrados',
-        'Empresas optantes do Simples Nacional',
-        'N° pessoas podem renegociar suas dívidas',
+        '(Emprego) Trabalhadores com CLT',
+        '(Emprego) MEI cadastrados',
+        '(Emprego) Empresas optantes do Simples Nacional',
+        '(Emprego) N° pessoas podem renegociar suas dívidas',
 
         // culture
-        'R$ investidos para a produção cultural local',
-        '(Em branco)',
+        '(Cultura) R$ investidos para a produção cultural local',
+        '(Cultura) (Em branco)',
 
         // citizen
-        'N° de famílias que ganharam na minha casa minha vida',
-        'R$ contratados pelas famílias que financiaram suas pelo minha casa minha vida',
-        'N° pessoas atendidas pelo programa Bolsa família',
-        'R$ valor médio do beneficio pago pelo Bolsa família',
-        '(Em Branco)',
+        '(T/ ao cidadão) N° de famílias que ganharam na minha casa minha vida',
+        '(T/ ao cidadão) R$ contratados pelas famílias que financiaram suas pelo minha casa minha vida',
+        '(T/ ao cidadão) N° pessoas atendidas pelo programa Bolsa família',
+        '(T/ ao cidadão) R$ valor médio do beneficio pago pelo Bolsa família',
+        '(T/ ao cidadão) (Em Branco)',
 
         // state_and_municipalities
-        'R$ transferido para aplicação em obras públicas',
-        'R$ transferido para aplicação da saúde da população',
-        '(Em Branco)',
-        '(Em Branco)'
+        '(T/ aos Estados/Municípios) R$ transferido para aplicação em obras públicas',
+        '(T/ aos Estados/Municípios) R$ transferido para aplicação da saúde da população',
+        '(T/ aos Estados/Municípios) (Em Branco)',
+        '(T/ aos Estados/Municípios) (Em Branco)',
+
+        // agriculture
+        '(Agriculture) contratos de créditos liberados',
+        '(Agriculture) R$ em Empréstimos liberados',
+        '(Agriculture) Contratos de credito para financiar (PRONAF)',
+        '(Agriculture) R$ foram concedidos para a (PRONAF)',
+        '(Agriculture) N° de agricultores que realizam venda direta para o governo',
+        '(Agriculture) R$ em vendas diretas de alimentos dos agricultores para o governo',
     ];
 
     /**
@@ -68,13 +78,9 @@ class ScraperData {
             switch (scraperData.from) {
                 case pagesEnum.JOBS:
                     isValidated = scraperData.textContent.length === 4;
-                    scraperData.textContent = scraperData.textContent
-                        .map(text => this.#convertTextToNumber(text));
                     break;
                 case pagesEnum.CITIZEN:
                     isValidated = scraperData.textContent.length === 5;
-                    scraperData.textContent = scraperData.textContent
-                        .map(text => this.#convertTextToNumber(text));
                     break;
                 case pagesEnum.CULTURE:
                     isValidated = scraperData.textContent.length === 2;
@@ -82,7 +88,16 @@ class ScraperData {
                 case pagesEnum.STATE_AND_MUNICIPALITIES:
                     isValidated = scraperData.textContent.length === 4;
                     break;
+                case pagesEnum.AGRICULTURE:
+                    isValidated = scraperData.textContent.length === 6;
+                    const [i0, i1, i2, i3, i4, i5] = scraperData.textContent;
+                    scraperData.textContent = [i2, i0, i1, i3, i5, i4];
+                    break;
             }
+
+            scraperData.textContent = scraperData.textContent
+                .map(text => this.#convertTextToNumber(text));
+
             if (!isValidated) {
                 this.#allDataValidated = false;
             }
@@ -92,8 +107,10 @@ class ScraperData {
 
     /** @param {string} text  */
     #convertTextToNumber(text) {
+        if (typeof text !== 'string') return text;
+
         const regex = /^[\d]+(?:\.{1})?(?:\d+)?$/g;
-        if (text.match(regex))
+        if (text?.match(regex))
             return Number(text.replace('.', ''));
         else return text;
     }
@@ -137,7 +154,12 @@ class ScraperData {
     }
 
     toXLSXLine() {
-        return this.#scraperData.reduce((prev, current) => [...prev, ...current.textContent], [this.#city.name]);
+        const { textContent: jobs } = this.#scraperData.find(scraperData => scraperData.from === pagesEnum.JOBS) ?? new Array(4).fill('Não encontrado');
+        const { textContent: culture } = this.#scraperData.find(scraperData => scraperData.from === pagesEnum.CULTURE) ?? new Array(2).fill('Não encontrado');
+        const { textContent: citizen } = this.#scraperData.find(scraperData => scraperData.from === pagesEnum.CITIZEN) ?? new Array(5).fill('Não encontrado');
+        const { textContent: stateAndMunicipalities } = this.#scraperData.find(scraperData => scraperData.from === pagesEnum.STATE_AND_MUNICIPALITIES) ?? new Array(4).fill('Não encontrado');
+        const { textContent: agriculture } = this.#scraperData.find(scraperData => scraperData.from === pagesEnum.AGRICULTURE) ?? new Array(4).fill('Não encontrado');
+        return [this.#city.name, ...jobs, ...culture, ...citizen, ...stateAndMunicipalities, ...agriculture];
     }
 
     /**
