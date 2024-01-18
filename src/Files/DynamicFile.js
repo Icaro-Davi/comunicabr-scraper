@@ -15,15 +15,15 @@ class DynamicFile {
             .catch(() => false);
     }
 
-    async getFile(){
-        if(await this.exists(this.#filepath)){
+    async getFile() {
+        if (await this.exists(this.#filepath)) {
             const file = await readFile(this.#filepath);
             return file;
         }
     }
 
 
-    getFilepath(){
+    getFilepath() {
         return this.#filepath;
     }
 
@@ -40,6 +40,7 @@ class DynamicFile {
                 this.#isLoading = true;
                 const file = await this.exists(this.#filepath) ? await readFile(this.#filepath) : undefined;
                 const fileToSave = await beforeSave(file, data);
+                if (!fileToSave) throw new Error('Cannot save undefined data');
                 await writeFile(this.#filepath, fileToSave, { encoding: 'utf8' });
                 this.#isLoading = false;
 
